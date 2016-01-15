@@ -1,0 +1,12 @@
+https://github.com/h2so5/mruby-base58.git
+https://github.com/h2so5/atom-chary-tree-view.git
+https://github.com/h2so5/goback.git
+https://github.com/h2so5/mruby-sha2.git
+https://github.com/riot/riot.git
+https://github.com/riot/riot.git -b dev
+https://github.com/riot/riot.git -b v2.2.0
+https://github.com/direnv/direnv.git -b gh-pages
+https://github.com/direnv/direnv.git
+https://github.com/paularmstrong/basejs.git
+https://gist.github.com/d429d0aec527482f6209.git
+https://github.com/h2so5/geit.git

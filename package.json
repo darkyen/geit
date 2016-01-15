@@ -1,0 +1,32 @@
+{
+  "name": "geit",
+  "version": "0.0.1",
+  "description": "Simply get source code trees from a git repository via Smart HTTP",
+  "main": "index.js",
+  "scripts": {
+    "test": "cd tests && cat list.txt | ./run.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/h2so5/geit.git"
+  },
+  "keywords": [
+    "git",
+    "http"
+  ],
+  "author": "h2so5",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/h2so5/geit/issues"
+  },
+  "homepage": "https://github.com/h2so5/geit#readme",
+  "dependencies": {
+    "levelup": "^1.3.1",
+    "memdown": "^1.1.1",
+    "pako": "^0.2.8",
+    "request": "^2.67.0"
+  },
+  "devDependencies": {
+    "minimist": "^1.2.0"
+  }
+}
