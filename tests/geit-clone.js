@@ -33,33 +33,15 @@ function extractTree(repo, tree, dir) {
   }
 }
 
-var repo = geit(argv._[0], {});
+const repo = geit(argv._[0], {});
+const ref = argv.b ? argv.b : 'HEAD';
 
-repo.refs(function(refs, err) {
-  if (argv.refs) {
-    console.log(refs);
+repo.tree(ref, function(tree, err) {
+  if (argv.tree) {
+    console.log(tree);
     return;
   }
 
-  var ref = 'HEAD';
-  if (argv.b) {
-    if (refs['refs/heads/' + argv.b]) {
-      ref = 'refs/heads/' + argv.b;
-    } else if (refs['refs/tags/' + argv.b]) {
-      ref = 'refs/tags/' + argv.b;
-    } else {
-      console.warn(argv.b + ' not found');
-      return;
-    }
-  }
-
-  repo.tree(refs[ref], function(tree, err) {
-    if (argv.tree) {
-      console.log(tree);
-      return;
-    }
-
-    const dir = argv._[1];
-    extractTree(repo, tree, dir);
-  });
+  const dir = argv._[1];
+  extractTree(repo, tree, dir);
 });

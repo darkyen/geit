@@ -620,72 +620,98 @@ function geit(url, option) {
     });
   }
 
+  function refs(cb) {
+    let refUrl = url + '/info/refs?service=git-upload-pack';
+    geitRequest.get(refUrl)
+    .on('response', (response) => {
+      let data = new Buffer(0);
+      if (response.statusCode != 200) {
+        cb(null, new Error(response.statusCode + ' ' + response.statusMessage));
+      } else {
+        response.on('data', (buf) => {
+          data = Buffer.concat([data, buf]);
+        }).on('end', function() {
+          try {
+            let obj = parseGitRefs(data).reduce((obj, ref) => {
+              obj[ref.name] = ref.id;
+              return obj;
+            }, {});
+
+            cb(obj, null);
+          } catch (err) {
+            cb(null, err);
+          }
+        });
+      }
+    })
+    .on('error', (err) => {
+      cb(null, err);
+    });
+  }
+
+  function blob(id, cb) {
+    fetchObject(id).then((obj) => {
+      if (obj == null || obj.type !== 3) {
+        throw new Error('blob object not found');
+      }
+
+      cb(obj.data, null);
+    }).catch((err) => {
+      cb(null, err);
+    });
+  }
+
+  function tree(id, cb) {
+    (new Promise((resolve, reject) => {
+      const idRegexp = /^[0-9a-f]{40}$/;
+      if (idRegexp.test(id)) {
+        resolve(id);
+      } else {
+        refs((refs) => {
+          let ref;
+          if (ref = refs[id]) {
+            resolve(ref);
+          } else if (ref = refs['refs/heads/' + id]) {
+            resolve(ref);
+          } else if (ref = refs['refs/tags/' + id]) {
+            resolve(ref);
+          } else {
+            reject(new Error('no such branch or tag'));
+          }
+        });
+      }
+    }))
+    .then((id) => {
+      return fetchObject(id);
+    })
+    .then((obj) => {
+      if (obj == null || obj.type !== 1) {
+        throw new Error('commit object not found');
+      }
+
+      const tree = parseCommitObject(obj.data).tree;
+      return fetchObject(tree);
+    })
+    .then((obj) => {
+      if (obj == null || obj.type !== 2) {
+        throw new Error('tree object not found');
+      }
+
+      const tree = parseTreeObject(obj.data);
+      return fetchTree(tree);
+    })
+    .then((tree) => {
+      cb(tree, null);
+    })
+    .catch((err) => {
+      cb(null, err);
+    });
+  }
+
   return {
-    refs: (cb) => {
-      let refUrl = url + '/info/refs?service=git-upload-pack';
-      geitRequest.get(refUrl)
-      .on('response', (response) => {
-        let data = new Buffer(0);
-        if (response.statusCode != 200) {
-          cb(null, new Error(response.statusCode + ' ' + response.statusMessage));
-        } else {
-          response.on('data', (buf) => {
-            data = Buffer.concat([data, buf]);
-          }).on('end', function() {
-            try {
-              let obj = parseGitRefs(data).reduce((obj, ref) => {
-                obj[ref.name] = ref.id;
-                return obj;
-              }, {});
-
-              cb(obj, null);
-            } catch (err) {
-              cb(null, err);
-            }
-          });
-        }
-      })
-      .on('error', (err) => {
-        cb(null, err);
-      });
-    },
-
-    blob: (id, cb) => {
-      fetchObject(id).then((obj) => {
-        if (obj == null || obj.type !== 3) {
-          throw new Error('blob object not found');
-        }
-
-        cb(obj.data, null);
-      }).catch((err) => {
-        cb(null, err);
-      });
-    },
-
-    tree: function tree(id, cb) {
-      fetchObject(id).then((obj) => {
-        if (obj == null || obj.type !== 1) {
-          throw new Error('commit object not found');
-        }
-
-        const tree = parseCommitObject(obj.data).tree;
-        return fetchObject(tree);
-      })
-      .then((obj) => {
-        if (obj == null || obj.type !== 2) {
-          throw new Error('tree object not found');
-        }
-
-        const tree = parseTreeObject(obj.data);
-        return fetchTree(tree);
-      })
-      .then((tree) => {
-        cb(tree, null);
-      })
-      .catch((err) => {
-        cb(null, err);
-      });
-    },
+    refs: refs,
+    blob: blob,
+    tree: tree,
   };
 }
 

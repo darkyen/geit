@@ -23,17 +23,12 @@ $ npm install --save geit
 const geit = require('geit');
 const repo = geit('https://github.com/h2so5/geit.git');
 
-repo.refs(function(refs, err) {
-  const commitID = refs['HEAD'];
-  console.log('HEAD ID: ' + commitID);
+repo.tree('HEAD', function(tree, err) {
+  const blobID = tree['README.md'].object;
+  console.log('Blob ID: ' + blobID);
 
-  repo.tree(commitID, function(tree, err) {
-    const blobID = tree['README.md'].object;
-    console.log('Blob ID: ' + blobID);
-
-    repo.blob(blobID, function(data, err) {
-      console.log(data.toString());
-    });
+  repo.blob(blobID, function(data, err) {
+    console.log(data.toString());
   });
 });
 ```
@@ -49,11 +44,8 @@ const fs = require('fs');
 
 const repo = geit('https://github.com/h2so5/geit.git');
 
-repo.refs(function(refs, err) {
-  const commitID = refs['HEAD'];
-  repo.tree(commitID, function(tree, err) {
-    extractTree(repo, tree, './geit');
-  });
+repo.tree('HEAD', function(tree, err) {
+  extractTree(repo, tree, './geit');
 });
 
 function extractTree(repo, tree, dir) {
@@ -122,7 +114,7 @@ const repo = geit('https://github.com/h2so5/geit.git', {
 
 ## `repo.tree(id, callback)`
 
-- `id` String - Commit ID
+- `id` String - Commit ID | Branch name | Tag name | Ref name
 - `callback` Function
   - `tree` Object - Git tree
   - `err` Object - Error
