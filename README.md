@@ -1,4 +1,4 @@
-# geit
+# geit 🐐
 
 [![Build Status](https://travis-ci.org/h2so5/geit.svg?branch=master)](https://travis-ci.org/h2so5/geit)
 [![npm version](https://badge.fury.io/js/geit.svg)](https://badge.fury.io/js/geit)
