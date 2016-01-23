@@ -6,3 +6,11 @@ install:
 - npm install
 script:
 - npm test
+deploy:
+  provider: npm
+  email: mail@h2so5.net
+  api_key:
+    secure: dQrh5iKjcRjJY/TfQx/24PEIYWcGxc3O34ApSXQ6TmRRhx4kOXspDiyibzfvvxIMoWaYBS1ukAoGoxvexB5dQokFkCj9kkZzgLm5CWKaxONAti/DeFzlCRhf8OnjKEBtM5BbJBG/81vWzV/dC9xlppW4PhjMQc2Aj4r20cA8gBJsGaiFkxF80hYUWCZ5p2zCBmMOnYiVOvLLkuRHwlVxJGiiOH8TbHh4F7/4cALSzy0nU9uXAY5H79Ov7r8tDx2Ky3gzzDyC0eWjQNcxY8K02I0Ymnv8xFDfjkWMP6JQoTVQAcTutlIVvBW+wql5fBC+uQej4NZzlzQVnd0f5/Wed/e8trUPcokJSrW3an8gUq8j/hd4IjsMfxOZPvzxQrR0Z5nul0Ar4yNNl/vvHvpnX+3vL8P5CGQcvdffNPb3OX4y1aYCOumDQpfH0twQ0mEqzuaxrPY1XByb+src1OOyUZycNsLDd8RfIrMgFSv6cQVLYSCGXY5wYm2w41N/jikujg6EYSA0Jacy1uD2P3pKtddZeimTVEuUuyXxgO5L5A3C1W1DHUm0El3oYoN4pZ/PV7yCC1U0TXcxVbLWWcMFOKe0Th8b431oIRuB41U+Jbw+A6YPR4GwqCoZU9Dnr2Mv4e6uXNTqXEK10ANePRBn3zxd0NBFQlVZ8PtHbIBMvjs=
+  on:
+    tags: true
+    repo: h2so5/geit
