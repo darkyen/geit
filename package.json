@@ -1,6 +1,6 @@
 {
   "name": "geit",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Simply get source code trees from a git repository via Smart HTTP",
   "main": "index.js",
   "scripts": {
