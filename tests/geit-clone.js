@@ -5,27 +5,25 @@ const path = require('path');
 const argv = require('minimist')(process.argv.slice(2));
 
 function extractTree(repo, tree, dir) {
-  for (var name in tree) {
-    (function(name) {
-      var item = tree[name];
-      if (item.children == null) {
-        repo.blob(item.object, function(blob, err) {
-          var filePath = path.join(dir, name);
-          if (item.mode === '120000') {
-            fs.linkSync(filePath, blob.toString());
-          } else if (item.mode === '160000') {
-            fs.mkdirSync(filePath);
-          } else {
-            var mode = parseInt(item.mode.slice(-3), 8);
-            fs.writeFileSync(filePath, blob, { mode: mode });
-          }
-        });
-      } else {
-        var dirPath = path.join(dir, name);
-        fs.mkdirSync(dirPath);
-        extractTree(repo, item.children, dirPath);
-      }
-    })(name);
+  for (let name in tree) {
+    var item = tree[name];
+    if (item.children == null) {
+      repo.blob(item.object, function(blob, err) {
+        var filePath = path.join(dir, name);
+        if (item.mode === '120000') {
+          fs.linkSync(filePath, blob.toString());
+        } else if (item.mode === '160000') {
+          fs.mkdirSync(filePath);
+        } else {
+          var mode = parseInt(item.mode.slice(-3), 8);
+          fs.writeFileSync(filePath, blob, { mode: mode });
+        }
+      });
+    } else {
+      var dirPath = path.join(dir, name);
+      fs.mkdirSync(dirPath);
+      extractTree(repo, item.children, dirPath);
+    }
   }
 }
 
