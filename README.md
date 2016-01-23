@@ -38,7 +38,7 @@ repo.refs(function(refs, err) {
 });
 ```
 
-### Exctract all files in a tree
+### Extract all files in a tree
 
 ```javascript
 const geit = require('geit');
