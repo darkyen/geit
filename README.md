@@ -40,6 +40,8 @@ repo.refs(function(refs, err) {
 
 ### Extract all files in a tree
 
+(Same as `git clone --depth 1` without .git directory)
+
 ```javascript
 const geit = require('geit');
 const path = require('path');
