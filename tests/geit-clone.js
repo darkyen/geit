@@ -1,3 +1,5 @@
+"use strict";
+
 const geit = require('../index');
 const os = require('os');
 const fs = require('fs');
@@ -5,27 +7,29 @@ const path = require('path');
 const argv = require('minimist')(process.argv.slice(2));
 
 function extractTree(repo, tree, dir) {
-  for (var name in tree) {
-    (function(name) {
-      var item = tree[name];
-      if (item.children == null) {
+  fs.mkdirSync(dir);
+  for (let name in tree) {
+    const item = tree[name];
+    const pathname = path.join(dir, name);
+    switch (item.mode) {
+      case '040000':  // directory
+        extractTree(repo, item.children, pathname);
+        break;
+      case '120000':  // symbolic link
         repo.blob(item.object, function(blob, err) {
-          var filePath = path.join(dir, name);
-          if (item.mode === '120000') {
-            fs.linkSync(filePath, blob.toString());
-          } else if (item.mode === '160000') {
-            fs.mkdirSync(filePath);
-          } else {
-            var mode = parseInt(item.mode.slice(-3), 8);
-            fs.writeFileSync(filePath, blob, { mode: mode });
-          }
+          fs.linkSync(pathname, blob.toString());
         });
-      } else {
-        var dirPath = path.join(dir, name);
-        fs.mkdirSync(dirPath);
-        extractTree(repo, item.children, dirPath);
-      }
-    })(name);
+
+        break;
+      case '160000':  // submodule
+        fs.mkdirSync(pathname);
+        break;
+      default:
+        const mode = parseInt(item.mode.slice(-4), 8); // permissions
+        repo.blob(item.object, function(blob, err) {
+          fs.writeFileSync(pathname, blob, { mode: mode });
+        });
+    }
   }
 }
 
@@ -56,7 +60,6 @@ repo.refs(function(refs, err) {
     }
 
     const dir = argv._[1];
-    fs.mkdirSync(dir);
     extractTree(repo, tree, dir);
   });
 });
