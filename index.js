@@ -445,6 +445,8 @@ function geit(url, option) {
     });
   }
 
+  var processingRequest = Promise.resolve();
+
   function requestObjects() {
     let body = new Buffer(0);
 
@@ -471,115 +473,128 @@ function geit(url, option) {
     let queue = Object.assign({}, objectQueue);
 
     const refUrl = url + '/git-upload-pack';
-    geitRequest.post(refUrl, {
-      body: body,
-      headers: {
-        accept: 'application/x-git-upload-pack-result',
-        'content-type': 'application/x-git-upload-pack-request',
-      },
-    })
-    .on('response', (response) => {
-      let data = new Buffer(0);
-      if (response.statusCode != 200) {
-        let err = new Error(response.statusCode + ' ' + response.statusMessage);
-        for (let id in queue) {
-          queue[id].reject(err);
-        }
-      } else {
-        response.on('data', (buf) => {
-          data = Buffer.concat([data, buf]);
-        }).on('end', function() {
-          if (data.length > 0) {
-            let promise = Promise.resolve();
-            let pack = parseGitUploadPackResult(data);
-            for (let id in pack.objects) {
-              let object = pack.objects[id];
-              promise = promise.then(function() {
-                return putObject(object).then(function() {
-                  if (queue[id] != null) {
-                    queue[id].resolve(object);
-                  }
 
-                  return Promise.resolve();
-                });
-              });
+    processingRequest = processingRequest.then(() => {
+      return new Promise((resolve, reject) => {
+        geitRequest.post(refUrl, {
+          body: body,
+          headers: {
+            accept: 'application/x-git-upload-pack-result',
+            'content-type': 'application/x-git-upload-pack-request',
+          },
+        })
+        .on('response', (response) => {
+          let data = new Buffer(0);
+          if (response.statusCode != 200) {
+            let err = new Error(response.statusCode + ' ' + response.statusMessage);
+            for (let id in queue) {
+              queue[id].reject(err);
             }
-
-            for (let id in pack.refDeltaObjects) {
-              let delta = pack.refDeltaObjects[id];
-              promise = promise.then(function() {
-                return fetchObject(delta.base).then((base) => {
-                  return applyDelta(base, delta.data);
-                })
-                .then((object) => {
-                  return putObject(object).then(function() {
-                    if (queue[object.id] != null) {
-                      queue[object.id].resolve(object);
-                    }
-
-                    return Promise.resolve();
-                  });
-                });
-              });
-            }
-
-            for (let id in pack.ofsDeltaObjects) {
-              let delta = pack.ofsDeltaObjects[id];
-              promise = promise.then(function() {
-                return fetchObject(delta.base).then((base) => {
-                  return applyDelta(base, delta.data);
-                })
-                .then((object) => {
-                  return putObject(object).then(function() {
-                    if (queue[object.id] != null) {
-                      queue[object.id].resolve(object);
-                    }
-
-                    for (let idx in pack.ofsDeltaObjects) {
-                      let delta = pack.ofsDeltaObjects[idx];
-                      if (delta.base === id) {
-                        delta.base = object.id;
+          } else {
+            response.on('data', (buf) => {
+              data = Buffer.concat([data, buf]);
+            }).on('end', function() {
+              let promise = Promise.resolve();
+              if (data.length > 0) {
+                let pack = parseGitUploadPackResult(data);
+                var k = Object.keys(pack.objects);
+                for (let id in pack.objects) {
+                  let object = pack.objects[id];
+                  promise = promise.then(function() {
+                    return putObject(object).then(function() {
+                      if (queue[id] != null) {
+                        queue[id].resolve(object);
                       }
-                    }
 
-                    return Promise.resolve();
+                      return Promise.resolve();
+                    });
                   });
-                });
-              });
-            }
+                }
 
+                for (let id in pack.refDeltaObjects) {
+                  let delta = pack.refDeltaObjects[id];
+                  promise = promise.then(function() {
+                    return getObject(delta.base).then((base) => {
+                      return applyDelta(base, delta.data);
+                    })
+                    .then((object) => {
+                      return putObject(object).then(function() {
+                        if (queue[object.id] != null) {
+                          queue[object.id].resolve(object);
+                        }
+
+                        return Promise.resolve();
+                      });
+                    });
+                  });
+                }
+
+                for (let id in pack.ofsDeltaObjects) {
+                  let delta = pack.ofsDeltaObjects[id];
+                  promise = promise.then(function() {
+                    return getObject(delta.base).then((base) => {
+                      return applyDelta(base, delta.data);
+                    })
+                    .then((object) => {
+                      return putObject(object).then(function() {
+                        if (queue[object.id] != null) {
+                          queue[object.id].resolve(object);
+                        }
+
+                        for (let idx in pack.ofsDeltaObjects) {
+                          let delta = pack.ofsDeltaObjects[idx];
+                          if (delta.base === id) {
+                            delta.base = object.id;
+                          }
+                        }
+
+                        return Promise.resolve();
+                      });
+                    });
+                  });
+                }
+
+                promise.then(() => {
+                  resolve();
+                });
+              }
+            });
           }
+        })
+        .on('error', (err) => {
+          for (let id in queue) {
+            queue[id].reject(err);
+          }
+
+          reject(err);
         });
-      }
-    })
-    .on('error', (err) => {
-      for (let id in queue) {
-        queue[id].reject(err);
-      }
+      });
     });
 
     objectQueue = {};
   }
 
   function fetchObject(id) {
-    return getObject(id).then((obj) => {
-      return Promise.resolve(obj);
-    })
-    .catch(() => {
-      let promise = objectQueue[id];
-      if (promise == null) {
-        promise = new Promise((resolve, reject) => {
-          objectQueue[id] = {
-            resolve: resolve,
-            reject: reject,
-            requested: false,
-          };
-        });
+    return processingRequest.then(() => {
+      return getObject(id).then((obj) => {
+        return Promise.resolve(obj);
+      })
+      .catch(() => {
+        let promise = objectQueue[id];
+        if (promise == null) {
+          promise = new Promise((resolve, reject) => {
+            objectQueue[id] = {
+              resolve: resolve,
+              reject: reject,
+              requested: false,
+            };
+          });
 
-        process.nextTick(requestObjects);
-      }
+          requestObjects();
+        }
 
-      return promise;
+        return promise;
+      });
     });
   }
 
