@@ -265,23 +265,7 @@ function parseGitUploadPackResult(data) {
     }
   }
 
-  let packBuffer = new Buffer(0);
-
-  while (true) {
-    const ref = readPktLine(rest);
-    if (ref.data.length > 0) {
-      if (ref.data[0] == 1) {
-        packBuffer = Buffer.concat([packBuffer, ref.data.slice(1)]);
-      }
-
-    } else {
-      break;
-    }
-
-    rest = ref.rest;
-  }
-
-  return parsePackFile(packBuffer);
+  return parsePackFile(rest);
 }
 
 function applyDelta(base, delta) {
@@ -519,7 +503,7 @@ function geit(url, option) {
       if (!object.requested) {
         let line;
         if (first) {
-          line = 'want ' + id + ' side-band-64k ofs_delta\n';
+          line = 'want ' + id + ' ofs_delta\n';
           first = false;
         } else {
           line = 'want ' + id + '\n';
