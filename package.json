@@ -4,7 +4,7 @@
   "description": "Simply get source code trees from a git repository via Smart HTTP",
   "main": "index.js",
   "scripts": {
-    "test": "cd tests && cat list.txt | ./run.sh"
+    "test": "cd tests && cat list.txt list-large.txt | ./run.sh"
   },
   "repository": {
     "type": "git",

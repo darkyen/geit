@@ -462,6 +462,9 @@ function geit(url, option) {
 
             return Promise.resolve();
           });
+        })
+        .catch(() => {
+          return Promise.resolve();
         });
       });
     }
@@ -487,6 +490,9 @@ function geit(url, option) {
 
             return Promise.resolve();
           });
+        })
+        .catch(() => {
+          return Promise.resolve();
         });
       });
     }
