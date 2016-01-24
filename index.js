@@ -624,66 +624,88 @@ function geit(url, option) {
 
   function refs(cb) {
     let refUrl = url + '/info/refs?service=git-upload-pack';
-    geitRequest.get(refUrl)
-    .on('response', (response) => {
-      let data = new Buffer(0);
-      if (response.statusCode != 200) {
-        cb(null, new Error(response.statusCode + ' ' + response.statusMessage));
-      } else {
-        response.on('data', (buf) => {
-          data = Buffer.concat([data, buf]);
-        }).on('end', function() {
-          try {
-            let obj = parseGitRefs(data).reduce((obj, ref) => {
-              obj[ref.name] = ref.id;
-              return obj;
-            }, {});
+    let promise = new Promise((resolve, reject) => {
+      geitRequest.get(refUrl)
+      .on('response', (response) => {
+        let data = new Buffer(0);
+        if (response.statusCode != 200) {
+          reject(new Error(response.statusCode + ' ' + response.statusMessage));
+        } else {
+          response.on('data', (buf) => {
+            data = Buffer.concat([data, buf]);
+          }).on('end', function() {
+            try {
+              let obj = parseGitRefs(data).reduce((obj, ref) => {
+                obj[ref.name] = ref.id;
+                return obj;
+              }, {});
 
-            cb(obj, null);
-          } catch (err) {
-            cb(null, err);
-          }
-        });
-      }
-    })
-    .on('error', (err) => {
-      cb(null, err);
+              resolve(obj);
+            } catch (err) {
+              reject(err);
+            }
+          });
+        }
+      })
+      .on('error', (err) => {
+        reject(err);
+      });
     });
+
+    if (cb) {
+      promise.then((obj) => {
+        cb(obj, null);
+      }, (err) => {
+        cb(null, err);
+      });
+    }
+
+    return promise;
   }
 
   function blob(id, cb) {
-    fetchObject(id).then((obj) => {
+    let promise = fetchObject(id).then((obj) => {
       if (obj == null || obj.type !== 3) {
         throw new Error('blob object not found');
       }
 
-      cb(obj.data, null);
+      return Promise.resolve(obj.data);
     }).catch((err) => {
-      cb(null, err);
+      return Promise.reject(err);
     });
+
+    if (cb) {
+      promise.then((data) => {
+        cb(data, null);
+      }, (err) => {
+        cb(null, err);
+      });
+    }
+
+    return promise;
   }
 
   function tree(id, cb) {
-    (new Promise((resolve, reject) => {
-      const idRegexp = /^[0-9a-f]{40}$/;
-      if (idRegexp.test(id)) {
-        resolve(id);
-      } else {
-        refs((refs) => {
-          let ref;
-          if (ref = refs[id]) {
-            resolve(ref);
-          } else if (ref = refs['refs/heads/' + id]) {
-            resolve(ref);
-          } else if (ref = refs['refs/tags/' + id]) {
-            resolve(ref);
-          } else {
-            reject(new Error('no such branch or tag'));
-          }
-        });
-      }
-    }))
-    .then((id) => {
+    const idRegexp = /^[0-9a-f]{40}$/;
+    let promise;
+    if (idRegexp.test(id)) {
+      promise = Promise.resolve(id);
+    } else {
+      promise = refs().then((res) => {
+        let ref;
+        if (ref = res[id]) {
+          return ref;
+        } else if (ref = res['refs/heads/' + id]) {
+          return ref;
+        } else if (ref = res['refs/tags/' + id]) {
+          return ref;
+        } else {
+          return Promise.reject(new Error('no such branch or tag'));
+        }
+      });
+    }
+
+    promise = promise.then((id) => {
       return fetchObject(id);
     })
     .then((obj) => {
@@ -701,13 +723,17 @@ function geit(url, option) {
 
       const tree = parseTreeObject(obj.data);
       return fetchTree(tree);
-    })
-    .then((tree) => {
-      cb(tree, null);
-    })
-    .catch((err) => {
-      cb(null, err);
     });
+
+    if (cb) {
+      promise.then((data) => {
+        cb(data, null);
+      }, (err) => {
+        cb(null, err);
+      });
+    }
+
+    return promise;
   }
 
   return {

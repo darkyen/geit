@@ -17,7 +17,7 @@ $ npm install --save geit
 
 ## Examples
 
-### Get README.md on HEAD
+### Get 'README.md' on HEAD
 
 ```javascript
 const geit = require('geit');
@@ -25,11 +25,25 @@ const repo = geit('https://github.com/h2so5/geit.git');
 
 repo.tree('HEAD', function(tree, err) {
   const blobID = tree['README.md'].object;
-  console.log('Blob ID: ' + blobID);
 
   repo.blob(blobID, function(data, err) {
     console.log(data.toString());
   });
+});
+```
+
+### Get 'README.md' on HEAD (Promise)
+
+```javascript
+const geit = require('geit');
+const repo = geit('https://github.com/h2so5/geit.git');
+
+repo.tree('HEAD').then((tree) => {
+  const blobID = tree['README.md'].object;
+  
+  return repo.blob(blobID);
+}).then((data) => {
+  console.log(data.toString());
 });
 ```
 
@@ -106,20 +120,20 @@ const repo = geit('https://github.com/h2so5/geit.git', {
   - `db` Object - [levelup](https://github.com/level/levelup) database object
   - `request` - Additional options for [request](https://github.com/request/request)
 
-## `repo.refs(callback)`
+## `repo.refs([callback]) -> [Promise]`
 
 - `callback` Function
   - `refs` Object - Git references
   - `err` Object - Error
 
-## `repo.tree(id, callback)`
+## `repo.tree(id[, callback]) -> [Promise]`
 
 - `id` String - Commit ID | Branch name | Tag name | Ref name
 - `callback` Function
   - `tree` Object - Git tree
   - `err` Object - Error
 
-## `repo.blob(id, callback)`
+## `repo.blob(id[, callback]) -> [Promise]`
 
 - `id` String - Blob ID
 - `callback` Function
