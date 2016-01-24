@@ -447,6 +447,69 @@ function geit(url, option) {
 
   var processingRequest = Promise.resolve();
 
+  function processPack(queue, data) {
+    let promise = Promise.resolve();
+    let pack = parseGitUploadPackResult(data);
+    var k = Object.keys(pack.objects);
+    for (let id in pack.objects) {
+      let object = pack.objects[id];
+      promise = promise.then(function() {
+        return putObject(object).then(function() {
+          if (queue[id] != null) {
+            queue[id].resolve(object);
+          }
+
+          return Promise.resolve();
+        });
+      });
+    }
+
+    for (let id in pack.refDeltaObjects) {
+      let delta = pack.refDeltaObjects[id];
+      promise = promise.then(function() {
+        return getObject(delta.base).then((base) => {
+          return applyDelta(base, delta.data);
+        })
+        .then((object) => {
+          return putObject(object).then(function() {
+            if (queue[object.id] != null) {
+              queue[object.id].resolve(object);
+            }
+
+            return Promise.resolve();
+          });
+        });
+      });
+    }
+
+    for (let id in pack.ofsDeltaObjects) {
+      let delta = pack.ofsDeltaObjects[id];
+      promise = promise.then(function() {
+        return getObject(delta.base).then((base) => {
+          return applyDelta(base, delta.data);
+        })
+        .then((object) => {
+          return putObject(object).then(function() {
+            if (queue[object.id] != null) {
+              queue[object.id].resolve(object);
+            }
+
+            for (let idx in pack.ofsDeltaObjects) {
+              let delta = pack.ofsDeltaObjects[idx];
+              if (delta.base === id) {
+                delta.base = object.id;
+              }
+            }
+
+            return Promise.resolve();
+          });
+        });
+      });
+    }
+
+    return promise;
+  }
+
   function requestObjects() {
     let body = new Buffer(0);
 
@@ -494,70 +557,9 @@ function geit(url, option) {
             response.on('data', (buf) => {
               data = Buffer.concat([data, buf]);
             }).on('end', function() {
-              let promise = Promise.resolve();
-              if (data.length > 0) {
-                let pack = parseGitUploadPackResult(data);
-                var k = Object.keys(pack.objects);
-                for (let id in pack.objects) {
-                  let object = pack.objects[id];
-                  promise = promise.then(function() {
-                    return putObject(object).then(function() {
-                      if (queue[id] != null) {
-                        queue[id].resolve(object);
-                      }
-
-                      return Promise.resolve();
-                    });
-                  });
-                }
-
-                for (let id in pack.refDeltaObjects) {
-                  let delta = pack.refDeltaObjects[id];
-                  promise = promise.then(function() {
-                    return getObject(delta.base).then((base) => {
-                      return applyDelta(base, delta.data);
-                    })
-                    .then((object) => {
-                      return putObject(object).then(function() {
-                        if (queue[object.id] != null) {
-                          queue[object.id].resolve(object);
-                        }
-
-                        return Promise.resolve();
-                      });
-                    });
-                  });
-                }
-
-                for (let id in pack.ofsDeltaObjects) {
-                  let delta = pack.ofsDeltaObjects[id];
-                  promise = promise.then(function() {
-                    return getObject(delta.base).then((base) => {
-                      return applyDelta(base, delta.data);
-                    })
-                    .then((object) => {
-                      return putObject(object).then(function() {
-                        if (queue[object.id] != null) {
-                          queue[object.id].resolve(object);
-                        }
-
-                        for (let idx in pack.ofsDeltaObjects) {
-                          let delta = pack.ofsDeltaObjects[idx];
-                          if (delta.base === id) {
-                            delta.base = object.id;
-                          }
-                        }
-
-                        return Promise.resolve();
-                      });
-                    });
-                  });
-                }
-
-                promise.then(() => {
-                  resolve();
-                });
-              }
+              processPack(queue, data).then(() => {
+                resolve();
+              });
             });
           }
         })
