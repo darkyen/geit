@@ -265,7 +265,11 @@ function parseGitUploadPackResult(data) {
     }
   }
 
-  return parsePackFile(rest);
+  if (rest.length > 0) {
+    return parsePackFile(rest);
+  } else {
+    return null;
+  }
 }
 
 function applyDelta(base, delta) {
@@ -434,7 +438,15 @@ function geit(url, option) {
   function processPack(queue, data) {
     let promise = Promise.resolve();
     let pack = parseGitUploadPackResult(data);
-    var k = Object.keys(pack.objects);
+
+    if (pack == null) {
+      var err = new Error('object not found');
+      for (let id in queue) {
+        queue[id].reject(err);
+      }
+      return Promise.reject(err);
+    }
+
     for (let id in pack.objects) {
       let object = pack.objects[id];
       promise = promise.then(function() {
