@@ -19,6 +19,8 @@ $ npm install --save geit
 
 ### Get 'README.md' on HEAD
 
+(Same as `git cat-file -p HEAD:README.md`)
+
 ```javascript
 const geit = require('geit');
 const repo = geit('https://github.com/h2so5/geit.git');
